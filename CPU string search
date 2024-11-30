@@ -32,3 +32,54 @@ int boyerMooreSearchCPU(const std::string &text, const std::string &pattern, int
         if (j < 0) {
             return startIdx + i;
         }
+ // Calculate the shift based on the bad character rule.
+        int shift = std::max(1, j - badChar[text[startIdx + i + j]]);
+        i += shift; // Move the pattern window forward by the shift amount.
+    }
+
+    return -1; // Return -1 if no match is found in this segment.
+}
+
+// Function to perform parallel Boyer-Moore search using OpenMP.
+std::vector<int> boyerMooreSearchParallelCPU(const std::string &text, const std::string &pattern, int numThreads) {
+    int textLength = text.size();             // Total length of the text.
+    int chunkSize = textLength / numThreads;  // Divide the text into chunks for each thread.
+    std::vector<int> results(numThreads, -1); // Store results for each thread.
+
+// Parallel loop using OpenMP to perform search in each chunk.
+    #pragma omp parallel for num_threads(numThreads)
+    for (int i = 0; i < numThreads; ++i) {
+        int startIdx = i * chunkSize; // Start index of the current chunk.
+        int endIdx = (i == numThreads - 1) ? textLength : startIdx + chunkSize; // End index of the chunk.
+
+// Perform Boyer-Moore search on this chunk of text.
+        results[i] = boyerMooreSearchCPU(text, pattern, startIdx, endIdx);
+    }
+
+    return results; // Return results from all threads.
+}
+
+int main() {
+    std::string text = "ABAAABCDABAAABCDABCDABC"; // Input text to search.
+    std::string pattern = "ABCD";                 // Pattern to search for.
+    int numThreads = 4;                           // Number of threads for parallel execution.
+
+// Measure the start time of the search.
+    auto start = std::chrono::high_resolution_clock::now();
+
+// Perform parallel Boyer-Moore search.
+    std::vector<int> results = boyerMooreSearchParallelCPU(text, pattern, numThreads);
+
+// Measure the end time of the search.
+    auto end = std::chrono::high_resolution_clock::now();
+    double elapsed = std::chrono::duration<double, std::milli>(end - start).count(); // Calculate elapsed time.
+
+// Output the match positions.
+    std::cout << "Match positions: ";
+    for (int i : results) {
+        if (i != -1) std::cout << i << " "; // Print valid match positions only.
+    }
+    std::cout << "\nTime elapsed: " << elapsed << " ms\n"; // Print elapsed time.
+
+    return 0; // Exit the program.
+}
