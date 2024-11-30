@@ -79,8 +79,8 @@ std::vector<int> boyerMooreSearchGPU(const std::string &text, const std::string 
 int main() {
     std::string text = "ABAAABCDABAAABCDABCDABC"; // Input text to search.
     std::string pattern = "ABCD";                 // Pattern to search for.
-    int blockSize = 128;                            // Number of threads per block.
-    int chunkSize = 8;                              // Chunk size for each thread.
+    int blockSize = 128;                          // Number of threads per block.
+    int chunkSize = 8;                            // Chunk size for each thread.
 
 // Measure the start time of the search.
     auto start = std::chrono::high_resolution_clock::now();
