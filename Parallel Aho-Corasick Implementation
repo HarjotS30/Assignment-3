@@ -1,9 +1,0 @@
-// Parallel Aho-Corasick Implementation (CUDA and OpenMP)
-
-#include <iostream>
-#include <vector>
-#include <string>
-#include <omp.h>
-#include <cuda.h>
-
-using namespace std;

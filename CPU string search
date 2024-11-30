@@ -1,0 +1,17 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <omp.h>
+#include <chrono>
+
+// Function to perform the Boyer-Moore search on a substring of the text
+// between indices [startIdx, endIdx).
+int boyerMooreSearchCPU(const std::string &text, const std::string &pattern, int startIdx, int endIdx) {
+    int textLength = endIdx - startIdx;
+    int patternLength = pattern.size();
+    int badChar[256] = {-1};
+
+// Initialize the bad character table to -1.
+    for (int i = 0; i < 256; ++i) badChar[i] = -1;
+// Fill the bad character table with the last occurrence index of each character in the pattern.
+    for (int i = 0; i < patternLength; ++i) badChar[pattern[i]] = i;
