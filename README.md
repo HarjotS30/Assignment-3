@@ -31,3 +31,9 @@
 - **November 28, 2024**: 
   - Finalized the report by completing the results, analysis, and conclusion sections.
   - Reviewed the entire report to ensure coherence and accuracy.
+
+Harjot Sohi
+-code implementation
+-diagram 
+-completing the results and analysis
+-researching
