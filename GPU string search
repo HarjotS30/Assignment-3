@@ -3,3 +3,75 @@
 #include <string>
 #include <vector>
 #include <chrono>
+
+// CUDA kernel for Boyer-Moore search in chunks of the text.
+__global__ void boyerMooreSearchKernel(
+    const char *text, const char *pattern, int *results, int textLength, int patternLength, int chunkSize) {
+    int threadId = blockIdx.x * blockDim.x + threadIdx.x; // Compute the thread ID.
+    int startIdx = threadId * chunkSize; // Start index for this thread's chunk.
+    int endIdx = min(startIdx + chunkSize + patternLength - 1, textLength); // End index for this chunk.
+
+// Shared memory for the bad character table.
+    __shared__ int badChar[256];
+
+// Initialize the bad character table in thread 0.
+    if (threadIdx.x == 0) {
+        for (int i = 0; i < 256; ++i) badChar[i] = -1;
+        for (int i = 0; i < patternLength; ++i) badChar[pattern[i]] = i;
+    }
+    __syncthreads(); // Ensure all threads see the initialized table.
+
+// Perform the Boyer-Moore search within the assigned chunk.
+    for (int i = startIdx; i <= endIdx - patternLength; i++) {
+        int j = patternLength - 1; // Start matching from the end of the pattern.
+
+// Compare pattern with the text segment.
+        while (j >= 0 && pattern[j] == text[i + j]) {
+            j--;
+        }
+
+// If the pattern is fully matched, record the starting position.
+        if (j < 0) {
+            results[threadId] = i;
+            return;
+        }
+
+// Compute the shift using the bad character rule.
+        int shift = max(1, j - badChar[text[i + j]]);
+        i += shift - 1; // Adjust the search window.
+    }
+
+    results[threadId] = -1; // No match found for this thread's chunk.
+}
+// Function to perform Boyer-Moore search using the GPU.
+std::vector<int> boyerMooreSearchGPU(const std::string &text, const std::string &pattern, int blockSize, int chunkSize) {
+    int textLength = text.size(); // Length of the text.
+    int patternLength = pattern.size(); // Length of the pattern.
+    int gridSize = (textLength + chunkSize - 1) / chunkSize; // Number of blocks needed.
+
+    // Allocate memory on the GPU.
+    char *d_text, *d_pattern;
+    int *d_results;
+    cudaMalloc((void **)&d_text, textLength * sizeof(char));
+    cudaMalloc((void **)&d_pattern, patternLength * sizeof(char));
+    cudaMalloc((void **)&d_results, gridSize * sizeof(int));
+
+    // Copy data from host to device.
+    cudaMemcpy(d_text, text.c_str(), textLength * sizeof(char), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_pattern, pattern.c_str(), patternLength * sizeof(char), cudaMemcpyHostToDevice);
+
+    // Launch the Boyer-Moore kernel.
+    boyerMooreSearchKernel<<<gridSize, blockSize>>>(d_text, d_pattern, d_results, textLength, patternLength, chunkSize);
+
+    // Retrieve results from the GPU.
+    std::vector<int> results(gridSize);
+    cudaMemcpy(results.data(), d_results, gridSize * sizeof(int), cudaMemcpyDeviceToHost);
+
+    // Free GPU memory.
+    cudaFree(d_text);
+    cudaFree(d_pattern);
+    cudaFree(d_results);
+
+    return results;
+}
+
